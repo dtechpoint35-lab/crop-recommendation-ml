@@ -14,3 +14,4 @@ streamlit
 # Optional (for future improvements)
 requests        # for weather API integration
 plotly          # for interactive graphs
+Flask
