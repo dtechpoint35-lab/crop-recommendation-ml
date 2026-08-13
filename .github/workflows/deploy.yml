@@ -41,4 +41,4 @@ jobs:
       - name: Push Docker Image to ECR
         run: |
           docker push \
-          066971257562.dkr.ecr.ap-south-1.amazonaws.com/crop-recommendation:v1
+          066971257562.dkr.ecr.ap-south-1.amazonaws.com/crop-recommendation:v3
