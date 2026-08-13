@@ -13,7 +13,7 @@ scaler = joblib.load('../models/scaler.pkl')
 label_encoder = joblib.load('../models/label_encoder.pkl')
 
 #  App title and description
-st.set_page_config(page_title="Crop Recommendation System", page_icon="🌾", layout="centered")
+st.set_page_config(page_title="Crop Recommendation Systemssssssss", page_icon="🌾", layout="centered")
 
 st.title("Crop Recommendation System")
 st.markdown("""

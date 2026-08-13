@@ -8,6 +8,11 @@ on:
 permissions:
   contents: read
 
+env:
+  AWS_REGION: ap-south-1
+  ECR_REGISTRY: 066971257562.dkr.ecr.ap-south-1.amazonaws.com
+  ECR_REPOSITORY: crop-recommendation
+
 jobs:
 
   build-and-push:
@@ -24,24 +29,20 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build Docker Image
         run: |
-          docker build -t crop-recommendation:v1 .
+          docker build \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.run_number }} .
 
-      - name: Tag Docker Image
-        run: |
-          docker tag crop-recommendation:v1 \
-          066971257562.dkr.ecr.ap-south-1.amazonaws.com/crop-recommendation:v1
-
-      - name: Push Docker Image to ECR
+      - name: Push Docker Image
         run: |
           docker push \
-          066971257562.dkr.ecr.ap-south-1.amazonaws.com/crop-recommendation:v1
+            $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.run_number }}
 
 
   deploy-to-ec2:
@@ -53,6 +54,7 @@ jobs:
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.0
+
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
@@ -60,32 +62,38 @@ jobs:
 
           script: |
 
-            echo "Connected to EC2"
+            echo "===== LOGIN TO ECR ====="
 
-            echo "Logging into ECR..."
+            aws ecr get-login-password \
+              --region ap-south-1 | \
+              docker login \
+              --username AWS \
+              --password-stdin \
+              066971257562.dkr.ecr.ap-south-1.amazonaws.com
 
-            aws ecr get-login-password --region ap-south-1 | \
-            docker login --username AWS --password-stdin \
-            066971257562.dkr.ecr.ap-south-1.amazonaws.com
 
-            echo "Pulling latest image..."
+            echo "===== PULL NEW IMAGE ====="
 
             docker pull \
-            066971257562.dkr.ecr.ap-south-1.amazonaws.com/crop-recommendation:v1
+              066971257562.dkr.ecr.ap-south-1.amazonaws.com/crop-recommendation:${{ github.run_number }}
 
-            echo "Stopping old container..."
 
-            docker stop crop-app || true
+            echo "===== REMOVE OLD CONTAINER ====="
 
-            echo "Removing old container..."
+            docker rm -f crop-app || true
 
-            docker rm crop-app || true
 
-            echo "Starting new container..."
+            echo "===== START NEW CONTAINER ====="
 
             docker run -d \
-            -p 5000:5000 \
-            --name crop-app \
-            066971257562.dkr.ecr.ap-south-1.amazonaws.com/crop-recommendation:v1
+              --name crop-app \
+              -p 5000:5000 \
+              066971257562.dkr.ecr.ap-south-1.amazonaws.com/crop-recommendation:${{ github.run_number }}
 
-            echo "Deployment completed!"
+
+            echo "===== DEPLOYMENT COMPLETE ====="
+
+            docker ps
+
+            docker inspect crop-app \
+              --format '{{.Config.Image}}'
