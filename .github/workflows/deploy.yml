@@ -6,22 +6,21 @@ on:
       - main
 
 jobs:
-  test:
+  aws-test:
+
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          python-version: "3.11"
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
 
-      - name: Install Dependencies
-        run: |
-          pip install -r requirements.txt
-
-      - name: Test Python
-        run: |
-          python --version
+      - name: Test AWS Connection
+        run: aws sts get-caller-identity
